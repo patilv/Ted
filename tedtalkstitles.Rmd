@@ -1,7 +1,7 @@
 Word Cloud of Ted Talk Titles and Identifying Frequent Speakers 
 ==============================================================
 
-A recent [article in openculture.com by Dan Colman](http://www.openculture.com/2014/06/1756-ted-talks-listed-in-a-neat-spreadsheet.html) mentioned that there was a [list of 1756 Ted Talks] maintained by "someone" in a spreadsheet format. A link to this sheet can also be found on [this page on Wikipedia](http://en.wikipedia.org/wiki/List_of_TED_speakers). It was titled "Ted Talks as of 5/23/2014". I downloaded that spreadsheet on 6/12/2014 from [this link](https://spreadsheets.google.com/ccc?hl=en&key=pjGlYH-8AK8ffDa6o2bYlXg&hl=en#gid=0) and saved that as a csv file. It turned out to be a list of 1755 talks. Here, I make a wordcloud of the titles of these talks and a few ggplots to identify speakers with 3 or more appearances using Karthik Ram's Wes Anderson palette for R.  
+A recent [article in openculture.com by Dan Colman](http://www.openculture.com/2014/06/1756-ted-talks-listed-in-a-neat-spreadsheet.html) mentioned that there was a list of 1756 Ted Talks maintained by "someone" in a spreadsheet format. A link to this sheet can also be found on [this page on Wikipedia](http://en.wikipedia.org/wiki/List_of_TED_speakers). It was titled "Ted Talks as of 5/23/2014". I downloaded that spreadsheet on 6/12/2014 from [this link](https://spreadsheets.google.com/ccc?hl=en&key=pjGlYH-8AK8ffDa6o2bYlXg&hl=en#gid=0) and saved that as a csv file. It turned out to be a list of 1755 talks. Here, I make a wordcloud of the titles of these talks and a few ggplots to identify speakers with 3 or more appearances using Karthik Ram's Wes Anderson palette for R.  
 
 # Reading the data in
 
@@ -10,10 +10,11 @@ library(knitr)
 opts_chunk$set(
   tidy=TRUE,
   tidy.opts=list(width.cutoff=70,replace.assign=TRUE))
+options(xtable.type="html")
 ```
 
 
-```{r message=FALSE, results='asis'}
+```{r message=FALSE}
 
 library(stringr)
 library(tm)
@@ -22,16 +23,15 @@ library(wesanderson)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
-library(knitr)
 ted=read.csv("ted.csv")
 colnames(ted)
 ```
   
-Columns of interest in this study are the names of the "Speaker", titles of the talk - "Name" column, and Duration of the talk ("Duration" column). Latter titles seem to have the first and last names of the speakers. Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on. 
+Columns of interest in this study are the names of the "Speaker", titles of the talk - "Name" column, and Duration of the talk - the "Duration" column. Latter titles seem to have the first and last names of the speakers at beginning . Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on. 
 
 # Some Cleaning
-
-In this piece, we remove the first two words from the 424th entry onward. We then clean up the text by removing some punctuations, extra spaces, and any URLs that may be present.  
+  
+In this section, we remove the first two words from the 424th entry. We then clean up the text by removing some punctuations, extra spaces, and any URLs that may be present.  
 
 ```{r}
 ted$Name=as.character(ted$Name)
@@ -104,21 +104,23 @@ speakfreqandduration= ted %>%
             Mean.Talk.Time=mean(TalkTime,na.rm=TRUE)) %>%
   filter(NumTalks>2) 
 
-kable(summary(speakfreqandduration$Mean.Talk.Time),row.names=FALSE)
+summary(speakfreqandduration$Mean.Talk.Time)
 
 ```
+
 The mean and median talk times are around 15 minutes. There are, of course, talks that are longer and shorter than those. More on those in the charts below.
 
-```{r}
+```{r warning=FALSE, message=FALSE,fig.width=10, fig.height=7,dpi=100}
 
 gg1=ggplot(speakfreqandduration,aes(x=NumTalks,fill=as.factor(NumTalks)))+scale_x_continuous(breaks=1:10)+geom_histogram() + xlab("Number of talks")+ ggtitle("Number of talks")+ scale_fill_manual(values = wes.palette(5, "Darjeeling2"))+theme_bw()+theme(legend.position="none")
 
 gg2=ggplot(speakfreqandduration,aes(x=Mean.Talk.Time, fill=as.factor(NumTalks)))+scale_x_continuous(breaks=c(5,10,15,20,25,30,35,40,45,50,55,60,65,70))+geom_histogram()+scale_fill_manual(values = wes.palette(5, "Darjeeling2"))+ggtitle("Mean talk time")+theme_bw() + theme(legend.position="none")+scale_y_continuous(breaks=1:10)
 
-gg3=ggplot(speakfreqandduration,aes(x=reorder(Speaker,Mean.Talk.Time),y=Mean.Talk.Time, fill=as.factor(NumTalks)))+ scale_fill_manual(values = wes.palette(5, "Darjeeling2"), name=("Number of\nTalks"))+geom_bar(stat="identity")+xlab("Speaker")+theme_bw()+coord_flip()+ggtitle("Speakers, mean talk time, and number of talks")
+gg3=ggplot(speakfreqandduration,aes(x=reorder(Speaker,Mean.Talk.Time),y=Mean.Talk.Time, fill=as.factor(NumTalks)))+ scale_fill_manual(values = wes.palette(5, "Darjeeling2"), name=("Number of\nTalks"))+geom_bar(stat="identity")+xlab("Speaker")+theme_bw()+theme(axis.text.y=element_text(size=8),axis.title.y=element_blank())+coord_flip()+ggtitle("Speakers, mean talk time, and number of talks")
 
 grid.arrange(gg3,arrangeGrob(gg1,gg2,ncol=1),ncol=2,widths=c(2,1))
 
 ```
 
-A higher resolution picture of that image can be found at Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit. 
+* Hans Rosling has 9 appearances, the highest in this list, followed by Marco Tempest, who has 6 appearances. 
+* Assuming that many talks were scheduled for 15 mins, none of the 56 speakers had a mean talk time of around 14 mins. They all stretched their talk to either take up the whole 15 mins or perhaps, extended their talk a bit. Interesting stuff.

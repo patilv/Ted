@@ -17,14 +17,15 @@ library(wesanderson)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
-library(knitr)
 ted <- read.csv("ted.csv")
 colnames(ted)
 ```
 
-[1] "URL"           "ID"            "URL.1"         "Speaker"      
-[5] "Name"          "Short.Summary" "Event"         "Duration"     
-[9] "Publish.date" 
+```
+## [1] "URL"           "ID"            "URL.1"         "Speaker"      
+## [5] "Name"          "Short.Summary" "Event"         "Duration"     
+## [9] "Publish.date"
+```
   
 Columns of interest in this study are the names of the "Speaker", titles of the talk - "Name" column, and Duration of the talk ("Duration" column). Latter titles seem to have the first and last names of the speakers. Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on. 
 
@@ -113,12 +114,14 @@ speakfreqandduration <- ted %>% group_by(Speaker) %>% summarise(NumTalks = n(),
     Mean.Talk.Time = mean(TalkTime, na.rm = TRUE)) %>% filter(NumTalks > 
     2)
 
-kable(summary(speakfreqandduration$Mean.Talk.Time), row.names = FALSE)
+summary(speakfreqandduration$Mean.Talk.Time)
 ```
 
 ```
-## Error: 'dimnames' applied to non-array
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    3.03   11.60   15.50   14.90   17.20   36.30
 ```
+
 The mean and median talk times are around 15 minutes. There are, of course, talks that are longer and shorter than those. More on those in the charts below.
 
 
@@ -137,17 +140,13 @@ gg2 <- ggplot(speakfreqandduration, aes(x = Mean.Talk.Time, fill = as.factor(Num
 gg3 <- ggplot(speakfreqandduration, aes(x = reorder(Speaker, Mean.Talk.Time), 
     y = Mean.Talk.Time, fill = as.factor(NumTalks))) + scale_fill_manual(values = wes.palette(5, 
     "Darjeeling2"), name = ("Number of\nTalks")) + geom_bar(stat = "identity") + 
-    xlab("Speaker") + theme_bw() + coord_flip() + ggtitle("Speakers, mean talk time, and number of talks")
+    xlab("Speaker") + theme_bw() + theme(axis.text.y = element_text(size = 8), 
+    axis.title.y = element_blank()) + coord_flip() + ggtitle("Speakers, mean talk time, and number of talks")
 
 grid.arrange(gg3, arrangeGrob(gg1, gg2, ncol = 1), ncol = 2, widths = c(2, 
     1))
 ```
 
-```
-## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
-## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
-```
-
 ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
 
-Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit. 
+Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit. Interesting stuff.

@@ -8,10 +8,11 @@
 <span class="kw">library</span>(ggplot2)
 <span class="kw">library</span>(dplyr)
 <span class="kw">library</span>(gridExtra)
-<span class="kw">library</span>(knitr)
 ted &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;ted.csv&quot;</span>)
 <span class="kw">colnames</span>(ted)</code></pre>
-<p>[1] &quot;URL&quot; &quot;ID&quot; &quot;URL.1&quot; &quot;Speaker&quot;<br />[5] &quot;Name&quot; &quot;Short.Summary&quot; &quot;Event&quot; &quot;Duration&quot;<br />[9] &quot;Publish.date&quot;</p>
+<pre><code>## [1] &quot;URL&quot;           &quot;ID&quot;            &quot;URL.1&quot;         &quot;Speaker&quot;      
+## [5] &quot;Name&quot;          &quot;Short.Summary&quot; &quot;Event&quot;         &quot;Duration&quot;     
+## [9] &quot;Publish.date&quot;</code></pre>
 <p>Columns of interest in this study are the names of the &quot;Speaker&quot;, titles of the talk - &quot;Name&quot; column, and Duration of the talk (&quot;Duration&quot; column). Latter titles seem to have the first and last names of the speakers. Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on.</p>
 <h1 id="some-cleaning">Some Cleaning</h1>
 <p>In this piece, we remove the first two words from the 424th entry onward. We then clean up the text by removing some punctuations, extra spaces, and any URLs that may be present.</p>
@@ -75,8 +76,9 @@ speakfreqandduration &lt;-<span class="st"> </span>ted %&gt;%<span class="st"> <
     <span class="dt">Mean.Talk.Time =</span> <span class="kw">mean</span>(TalkTime, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)) %&gt;%<span class="st"> </span><span class="kw">filter</span>(NumTalks &gt;<span class="st"> </span>
 <span class="st">    </span><span class="dv">2</span>)
 
-<span class="kw">kable</span>(<span class="kw">summary</span>(speakfreqandduration$Mean.Talk.Time), <span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre>
-<pre><code>## Error: &#39;dimnames&#39; applied to non-array</code></pre>
+<span class="kw">summary</span>(speakfreqandduration$Mean.Talk.Time)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    3.03   11.60   15.50   14.90   17.20   36.30</code></pre>
 <p>The mean and median talk times are around 15 minutes. There are, of course, talks that are longer and shorter than those. More on those in the charts below.</p>
 <pre class="sourceCode r"><code class="sourceCode r">gg1 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(speakfreqandduration, <span class="kw">aes</span>(<span class="dt">x =</span> NumTalks, <span class="dt">fill =</span> <span class="kw">as.factor</span>(NumTalks))) +<span class="st"> </span>
 <span class="st">    </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="dv">1</span>:<span class="dv">10</span>) +<span class="st"> </span><span class="kw">geom_histogram</span>() +<span class="st"> </span><span class="kw">xlab</span>(<span class="st">&quot;Number of talks&quot;</span>) +<span class="st"> </span>
@@ -92,13 +94,12 @@ gg2 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(speakfreqanddur
 gg3 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(speakfreqandduration, <span class="kw">aes</span>(<span class="dt">x =</span> <span class="kw">reorder</span>(Speaker, Mean.Talk.Time), 
     <span class="dt">y =</span> Mean.Talk.Time, <span class="dt">fill =</span> <span class="kw">as.factor</span>(NumTalks))) +<span class="st"> </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">wes.palette</span>(<span class="dv">5</span>, 
     <span class="st">&quot;Darjeeling2&quot;</span>), <span class="dt">name =</span> (<span class="st">&quot;Number of</span><span class="ch">\n</span><span class="st">Talks&quot;</span>)) +<span class="st"> </span><span class="kw">geom_bar</span>(<span class="dt">stat =</span> <span class="st">&quot;identity&quot;</span>) +<span class="st"> </span>
-<span class="st">    </span><span class="kw">xlab</span>(<span class="st">&quot;Speaker&quot;</span>) +<span class="st"> </span><span class="kw">theme_bw</span>() +<span class="st"> </span><span class="kw">coord_flip</span>() +<span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;Speakers, mean talk time, and number of talks&quot;</span>)
+<span class="st">    </span><span class="kw">xlab</span>(<span class="st">&quot;Speaker&quot;</span>) +<span class="st"> </span><span class="kw">theme_bw</span>() +<span class="st"> </span><span class="kw">theme</span>(<span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>), 
+    <span class="dt">axis.title.y =</span> <span class="kw">element_blank</span>()) +<span class="st"> </span><span class="kw">coord_flip</span>() +<span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;Speakers, mean talk time, and number of talks&quot;</span>)
 
 <span class="kw">grid.arrange</span>(gg3, <span class="kw">arrangeGrob</span>(gg1, gg2, <span class="dt">ncol =</span> <span class="dv">1</span>), <span class="dt">ncol =</span> <span class="dv">2</span>, <span class="dt">widths =</span> <span class="kw">c</span>(<span class="dv">2</span>, 
     <span class="dv">1</span>))</code></pre>
-<pre><code>## stat_bin: binwidth defaulted to range/30. Use &#39;binwidth = x&#39; to adjust this.
-## stat_bin: binwidth defaulted to range/30. Use &#39;binwidth = x&#39; to adjust this.</code></pre>
 <div class="figure">
 <img src="figure/unnamed-chunk-6.png" alt="plot of chunk unnamed-chunk-6" /><p class="caption">plot of chunk unnamed-chunk-6</p>
 </div>
-<p>Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit.</p>
+<p>Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit. Interesting stuff.</p>
