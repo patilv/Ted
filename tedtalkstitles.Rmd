@@ -5,7 +5,15 @@ A recent [article in openculture.com by Dan Colman](http://www.openculture.com/2
 
 # Reading the data in
 
-```{r message=FALSE}
+```{r setup, echo=FALSE}
+library(knitr)
+opts_chunk$set(
+  tidy=TRUE,
+  tidy.opts=list(width.cutoff=70,replace.assign=TRUE))
+```
+
+
+```{r message=FALSE, results='asis'}
 
 library(stringr)
 library(tm)
@@ -14,14 +22,12 @@ library(wesanderson)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
-# Source: https://spreadsheets.google.com/ccc?hl=en&key=pjGlYH-8AK8ffDa6o2bYlXg&hl=en#gid=0"
+library(knitr)
 ted=read.csv("ted.csv")
-head(ted,2)
-tail(ted,2)
-
+colnames(ted)
 ```
-
-Latter titles seem to have the first and last names of the speakers. Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on. 
+  
+Columns of interest in this study are the names of the "Speaker", titles of the talk - "Name" column, and Duration of the talk ("Duration" column). Latter titles seem to have the first and last names of the speakers. Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on. 
 
 # Some Cleaning
 
@@ -49,13 +55,13 @@ clean.text <- function(x)
   # result
   return(x)
 }
-ted$TitleClean=clean.text(ted$Name)
+
 ```
 
 # Word cloud of popular words in Titles
 
-```{r cache=TRUE}
-myCorpus <- Corpus(VectorSource(ted$TitleClean))
+```{r}
+myCorpus <- Corpus(VectorSource(clean.text(ted$Name)))
 myStopwords <- c(stopwords('english'),"ted prize wish")
 # The latter was required because there were few titles with that phrase
 
@@ -98,12 +104,12 @@ speakfreqandduration= ted %>%
             Mean.Talk.Time=mean(TalkTime,na.rm=TRUE)) %>%
   filter(NumTalks>2) 
 
-summary(speakfreqandduration$Mean.Talk.Time)
+kable(summary(speakfreqandduration$Mean.Talk.Time),row.names=FALSE)
 
 ```
 The mean and median talk times are around 15 minutes. There are, of course, talks that are longer and shorter than those. More on those in the charts below.
 
-```{r fig.widths=40cm, fig.height=10cm}
+```{r}
 
 gg1=ggplot(speakfreqandduration,aes(x=NumTalks,fill=as.factor(NumTalks)))+scale_x_continuous(breaks=1:10)+geom_histogram() + xlab("Number of talks")+ ggtitle("Number of talks")+ scale_fill_manual(values = wes.palette(5, "Darjeeling2"))+theme_bw()+theme(legend.position="none")
 
@@ -114,4 +120,5 @@ gg3=ggplot(speakfreqandduration,aes(x=reorder(Speaker,Mean.Talk.Time),y=Mean.Tal
 grid.arrange(gg3,arrangeGrob(gg1,gg2,ncol=1),ncol=2,widths=c(2,1))
 
 ```
-Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit. 
+
+A higher resolution picture of that image can be found at Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit. 

@@ -1,0 +1,104 @@
+<h1 id="word-cloud-of-ted-talk-titles-and-identifying-frequent-speakers">Word Cloud of Ted Talk Titles and Identifying Frequent Speakers</h1>
+<p>A recent <a href="http://www.openculture.com/2014/06/1756-ted-talks-listed-in-a-neat-spreadsheet.html">article in openculture.com by Dan Colman</a> mentioned that there was a [list of 1756 Ted Talks] maintained by &quot;someone&quot; in a spreadsheet format. A link to this sheet can also be found on <a href="http://en.wikipedia.org/wiki/List_of_TED_speakers">this page on Wikipedia</a>. It was titled &quot;Ted Talks as of 5/23/2014&quot;. I downloaded that spreadsheet on 6/12/2014 from <a href="https://spreadsheets.google.com/ccc?hl=en&amp;key=pjGlYH-8AK8ffDa6o2bYlXg&amp;hl=en#gid=0">this link</a> and saved that as a csv file. It turned out to be a list of 1755 talks. Here, I make a wordcloud of the titles of these talks and a few ggplots to identify speakers with 3 or more appearances using Karthik Ram's Wes Anderson palette for R.</p>
+<h1 id="reading-the-data-in">Reading the data in</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(stringr)
+<span class="kw">library</span>(tm)
+<span class="kw">library</span>(wordcloud)
+<span class="kw">library</span>(wesanderson)
+<span class="kw">library</span>(ggplot2)
+<span class="kw">library</span>(dplyr)
+<span class="kw">library</span>(gridExtra)
+<span class="kw">library</span>(knitr)
+ted &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;ted.csv&quot;</span>)
+<span class="kw">colnames</span>(ted)</code></pre>
+<p>[1] &quot;URL&quot; &quot;ID&quot; &quot;URL.1&quot; &quot;Speaker&quot;<br />[5] &quot;Name&quot; &quot;Short.Summary&quot; &quot;Event&quot; &quot;Duration&quot;<br />[9] &quot;Publish.date&quot;</p>
+<p>Columns of interest in this study are the names of the &quot;Speaker&quot;, titles of the talk - &quot;Name&quot; column, and Duration of the talk (&quot;Duration&quot; column). Latter titles seem to have the first and last names of the speakers. Upon going through that column, I realized that this practice began with the 424th entry. To be safe, let's remove the first two words from that point on.</p>
+<h1 id="some-cleaning">Some Cleaning</h1>
+<p>In this piece, we remove the first two words from the 424th entry onward. We then clean up the text by removing some punctuations, extra spaces, and any URLs that may be present.</p>
+<pre class="sourceCode r"><code class="sourceCode r">ted$Name &lt;-<span class="st"> </span><span class="kw">as.character</span>(ted$Name)
+for (i in <span class="dv">424</span>:<span class="kw">nrow</span>(ted)) {
+    ted$Name[i] &lt;-<span class="st"> </span><span class="kw">word</span>(ted$Name[i], <span class="dv">3</span>, -<span class="dv">1</span>)
+}  <span class="co"># Removing first two words from row 424 onwards</span>
+
+<span class="co"># Function to clean text ## from Gaston Sanchez&#39;s work</span>
+<span class="co"># (https://sites.google.com/site/miningtwitter/questions/talking-about/wordclouds/comparison-cloud)</span>
+clean.text &lt;-<span class="st"> </span>function(x) {
+    <span class="co"># to lowercase</span>
+    x &lt;-<span class="st"> </span><span class="kw">tolower</span>(x)
+    <span class="co"># remove punctuation marks</span>
+    x &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;[[:punct:]]&quot;</span>, <span class="st">&quot;&quot;</span>, x)
+    <span class="co"># remove numbers</span>
+    x &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;[[:digit:]]&quot;</span>, <span class="st">&quot;&quot;</span>, x)
+    <span class="co"># remove tabs and extra spaces</span>
+    x &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;[ |</span><span class="ch">\t</span><span class="st">]{2,}&quot;</span>, <span class="st">&quot;&quot;</span>, x)
+    <span class="co"># remove blank spaces at the beginning</span>
+    x &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;^ &quot;</span>, <span class="st">&quot;&quot;</span>, x)
+    <span class="co"># remove blank spaces at the end</span>
+    x &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot; $&quot;</span>, <span class="st">&quot;&quot;</span>, x)
+    <span class="co"># result</span>
+    <span class="kw">return</span>(x)
+}</code></pre>
+<h1 id="word-cloud-of-popular-words-in-titles">Word cloud of popular words in Titles</h1>
+<pre class="sourceCode r"><code class="sourceCode r">myCorpus &lt;-<span class="st"> </span><span class="kw">Corpus</span>(<span class="kw">VectorSource</span>(<span class="kw">clean.text</span>(ted$Name)))
+myStopwords &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">stopwords</span>(<span class="st">&quot;english&quot;</span>), <span class="st">&quot;ted prize wish&quot;</span>)
+<span class="co"># The latter was required because there were few titles with that</span>
+<span class="co"># phrase</span>
+
+myCorpus &lt;-<span class="st"> </span><span class="kw">tm_map</span>(myCorpus, removeWords, myStopwords)
+tdmpremat &lt;-<span class="st"> </span><span class="kw">TermDocumentMatrix</span>(myCorpus)
+tdm &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(tdmpremat)
+sortedMatrix &lt;-<span class="st"> </span><span class="kw">sort</span>(<span class="kw">rowSums</span>(tdm), <span class="dt">decreasing =</span> <span class="ot">TRUE</span>)
+tdmframe &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">word =</span> <span class="kw">names</span>(sortedMatrix), <span class="dt">freq =</span> sortedMatrix)
+
+<span class="co"># plotting words that appear at least 5 times</span>
+<span class="kw">wordcloud</span>(tdmframe$word, tdmframe$freq, <span class="dt">random.order =</span> <span class="ot">FALSE</span>, <span class="dt">random.color =</span> <span class="ot">FALSE</span>, 
+    <span class="dt">min.freq =</span> <span class="dv">5</span>, <span class="dt">scale =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="fl">0.2</span>), <span class="dt">colors =</span> <span class="kw">wes.palette</span>(<span class="dv">5</span>, <span class="st">&quot;Darjeeling&quot;</span>))</code></pre>
+<div class="figure">
+<img src="figure/unnamed-chunk-3.png" alt="plot of chunk unnamed-chunk-3" /><p class="caption">plot of chunk unnamed-chunk-3</p>
+</div>
+<h1 id="speakers-with-more-than-2-appearances-and-mean-duration-of-their-talks">Speakers with more than 2 appearances and mean duration of their talks</h1>
+<pre class="sourceCode r"><code class="sourceCode r">numtalks &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="kw">table</span>(ted$Speaker))
+<span class="kw">table</span>(numtalks$Freq)</code></pre>
+<pre><code>## 
+##    1    2    3    4    5    6    9 
+## 1301  130   40   11    3    1    1</code></pre>
+<p>There were 1487 different speakers. 1301 of them gave one talk, whereas 130 of them had given two talks. Below, I will focus on only those people who have given more than 2 talks, which is a list of 56 people.</p>
+<p>Let's first deal with the duration of talk variable. Here, we compute the mean duration of talks for this group of 56.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Function adapted from</span>
+<span class="co"># http://stackoverflow.com/questions/5186972/how-to-convert-time-mmss-to-decimal-form-in-r</span>
+ted$TalkTime &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">strsplit</span>(<span class="kw">as.character</span>(ted$Duration), <span class="st">&quot;:&quot;</span>), function(x) {
+    x &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(x)
+    x[<span class="dv">1</span>] *<span class="st"> </span><span class="dv">60</span> +<span class="st"> </span>x[<span class="dv">2</span>] +<span class="st"> </span>x[<span class="dv">3</span>]/<span class="dv">60</span>
+})
+
+speakfreqandduration &lt;-<span class="st"> </span>ted %&gt;%<span class="st"> </span><span class="kw">group_by</span>(Speaker) %&gt;%<span class="st"> </span><span class="kw">summarise</span>(<span class="dt">NumTalks =</span> <span class="kw">n</span>(), 
+    <span class="dt">Mean.Talk.Time =</span> <span class="kw">mean</span>(TalkTime, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)) %&gt;%<span class="st"> </span><span class="kw">filter</span>(NumTalks &gt;<span class="st"> </span>
+<span class="st">    </span><span class="dv">2</span>)
+
+<span class="kw">kable</span>(<span class="kw">summary</span>(speakfreqandduration$Mean.Talk.Time), <span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre>
+<pre><code>## Error: &#39;dimnames&#39; applied to non-array</code></pre>
+<p>The mean and median talk times are around 15 minutes. There are, of course, talks that are longer and shorter than those. More on those in the charts below.</p>
+<pre class="sourceCode r"><code class="sourceCode r">gg1 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(speakfreqandduration, <span class="kw">aes</span>(<span class="dt">x =</span> NumTalks, <span class="dt">fill =</span> <span class="kw">as.factor</span>(NumTalks))) +<span class="st"> </span>
+<span class="st">    </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="dv">1</span>:<span class="dv">10</span>) +<span class="st"> </span><span class="kw">geom_histogram</span>() +<span class="st"> </span><span class="kw">xlab</span>(<span class="st">&quot;Number of talks&quot;</span>) +<span class="st"> </span>
+<span class="st">    </span><span class="kw">ggtitle</span>(<span class="st">&quot;Number of talks&quot;</span>) +<span class="st"> </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">wes.palette</span>(<span class="dv">5</span>, 
+    <span class="st">&quot;Darjeeling2&quot;</span>)) +<span class="st"> </span><span class="kw">theme_bw</span>() +<span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;none&quot;</span>)
+
+gg2 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(speakfreqandduration, <span class="kw">aes</span>(<span class="dt">x =</span> Mean.Talk.Time, <span class="dt">fill =</span> <span class="kw">as.factor</span>(NumTalks))) +<span class="st"> </span>
+<span class="st">    </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">25</span>, <span class="dv">30</span>, <span class="dv">35</span>, <span class="dv">40</span>, <span class="dv">45</span>, <span class="dv">50</span>, 
+        <span class="dv">55</span>, <span class="dv">60</span>, <span class="dv">65</span>, <span class="dv">70</span>)) +<span class="st"> </span><span class="kw">geom_histogram</span>() +<span class="st"> </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">wes.palette</span>(<span class="dv">5</span>, 
+    <span class="st">&quot;Darjeeling2&quot;</span>)) +<span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;Mean talk time&quot;</span>) +<span class="st"> </span><span class="kw">theme_bw</span>() +<span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;none&quot;</span>) +<span class="st"> </span>
+<span class="st">    </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> <span class="dv">1</span>:<span class="dv">10</span>)
+
+gg3 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(speakfreqandduration, <span class="kw">aes</span>(<span class="dt">x =</span> <span class="kw">reorder</span>(Speaker, Mean.Talk.Time), 
+    <span class="dt">y =</span> Mean.Talk.Time, <span class="dt">fill =</span> <span class="kw">as.factor</span>(NumTalks))) +<span class="st"> </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">wes.palette</span>(<span class="dv">5</span>, 
+    <span class="st">&quot;Darjeeling2&quot;</span>), <span class="dt">name =</span> (<span class="st">&quot;Number of</span><span class="ch">\n</span><span class="st">Talks&quot;</span>)) +<span class="st"> </span><span class="kw">geom_bar</span>(<span class="dt">stat =</span> <span class="st">&quot;identity&quot;</span>) +<span class="st"> </span>
+<span class="st">    </span><span class="kw">xlab</span>(<span class="st">&quot;Speaker&quot;</span>) +<span class="st"> </span><span class="kw">theme_bw</span>() +<span class="st"> </span><span class="kw">coord_flip</span>() +<span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;Speakers, mean talk time, and number of talks&quot;</span>)
+
+<span class="kw">grid.arrange</span>(gg3, <span class="kw">arrangeGrob</span>(gg1, gg2, <span class="dt">ncol =</span> <span class="dv">1</span>), <span class="dt">ncol =</span> <span class="dv">2</span>, <span class="dt">widths =</span> <span class="kw">c</span>(<span class="dv">2</span>, 
+    <span class="dv">1</span>))</code></pre>
+<pre><code>## stat_bin: binwidth defaulted to range/30. Use &#39;binwidth = x&#39; to adjust this.
+## stat_bin: binwidth defaulted to range/30. Use &#39;binwidth = x&#39; to adjust this.</code></pre>
+<div class="figure">
+<img src="figure/unnamed-chunk-6.png" alt="plot of chunk unnamed-chunk-6" /><p class="caption">plot of chunk unnamed-chunk-6</p>
+</div>
+<p>Assuming that many talks were scheduled for 15 mins, did you see that none of these speakers had a mean talk time of around 14 mins? They all stretched their talk to either take up the whole time or perhaps, extended their talk a bit.</p>
